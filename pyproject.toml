@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tickethub"
+version = "0.1.0"
+description = "Middleware REST servis za support tickete (DummyJSON -> lokalna baza -> FastAPI)."
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.111.0",
+    "uvicorn[standard]==0.30.1",
+    "httpx==0.27.0",
+    "pydantic==2.7.4",
+    "pydantic-settings==2.3.4",
+    "sqlalchemy==2.0.30",
+    "aiosqlite==0.20.0",
+    "alembic==1.13.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.2.2",
+    "pytest-asyncio==0.23.7",
+    "respx==0.21.1",
+    "ruff==0.4.9",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
