@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.db.models import TicketPriority, TicketStatus
 
@@ -52,3 +52,27 @@ class PaginatedTickets(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class TicketCreate(BaseModel):
+    """Ulaz za POST /tickets. id se ne prima - dodjeljuje ga baza."""
+
+    title: str = Field(min_length=1, max_length=255)
+    status: TicketStatus = TicketStatus.open
+    priority: TicketPriority = TicketPriority.low
+    assignee: str | None = Field(default=None, max_length=100)
+    description: str | None = None
+
+
+class TicketPatch(BaseModel):
+    """Ulaz za PATCH /tickets/{id}. Sva polja opcionalna - mijenja se samo poslano.
+
+    Zahvaljujući model_dump(exclude_unset=True) razlikujemo "nije poslano"
+    (ne diraj) od "poslano kao null" (postavi na null).
+    """
+
+    title: str | None = Field(default=None, min_length=1, max_length=255)
+    status: TicketStatus | None = None
+    priority: TicketPriority | None = None
+    assignee: str | None = Field(default=None, max_length=100)
+    description: str | None = None

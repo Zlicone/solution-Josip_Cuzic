@@ -5,12 +5,18 @@ Koristi moderni FastAPI stil s Annotated tipovima za Query/Depends.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import TicketPriority, TicketStatus
 from app.db.session import get_session
-from app.schemas.ticket import PaginatedTickets, TicketDetail, TicketListItem
+from app.schemas.ticket import (
+    PaginatedTickets,
+    TicketCreate,
+    TicketDetail,
+    TicketListItem,
+    TicketPatch,
+)
 from app.services import tickets as tickets_service
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
@@ -64,6 +70,28 @@ async def search_tickets(
 @router.get("/{ticket_id}", response_model=TicketDetail)
 async def get_ticket(ticket_id: int, session: SessionDep) -> TicketDetail:
     ticket = await tickets_service.get_ticket(session, ticket_id)
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return TicketDetail.model_validate(ticket)
+
+
+@router.post("", response_model=TicketDetail, status_code=status.HTTP_201_CREATED)
+async def create_ticket(payload: TicketCreate, session: SessionDep) -> TicketDetail:
+    ticket = await tickets_service.create_ticket(session, payload.model_dump())
+    return TicketDetail.model_validate(ticket)
+
+
+@router.patch("/{ticket_id}", response_model=TicketDetail)
+async def patch_ticket(
+    ticket_id: int,
+    payload: TicketPatch,
+    session: SessionDep,
+) -> TicketDetail:
+    # exclude_unset -> u obzir dolaze samo polja koja je klijent stvarno poslao.
+    changes = payload.model_dump(exclude_unset=True)
+    if not changes:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    ticket = await tickets_service.update_ticket(session, ticket_id, changes)
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return TicketDetail.model_validate(ticket)

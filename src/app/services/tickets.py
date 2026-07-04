@@ -54,3 +54,28 @@ async def search_tickets(
     stmt = stmt.order_by(Ticket.id).limit(limit).offset(offset)
     rows = (await session.execute(stmt)).scalars().all()
     return list(rows), total
+
+
+async def create_ticket(session: AsyncSession, data: dict) -> Ticket:
+    """Kreira novi ticket; id dodjeljuje baza (nastavlja se na seed)."""
+    ticket = Ticket(**data)
+    session.add(ticket)
+    await session.commit()
+    await session.refresh(ticket)  # povuci id + server defaulte (timestampe)
+    return ticket
+
+
+async def update_ticket(
+    session: AsyncSession,
+    ticket_id: int,
+    changes: dict,
+) -> Ticket | None:
+    """Parcijalno ažurira ticket; mijenja samo poslana polja. None ako ne postoji."""
+    ticket = await session.get(Ticket, ticket_id)
+    if ticket is None:
+        return None
+    for key, value in changes.items():
+        setattr(ticket, key, value)
+    await session.commit()
+    await session.refresh(ticket)
+    return ticket
