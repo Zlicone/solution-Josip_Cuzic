@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import CurrentUser
 from app.db.models import TicketPriority, TicketStatus
 from app.db.session import get_session
 from app.schemas.ticket import (
@@ -76,7 +77,9 @@ async def get_ticket(ticket_id: int, session: SessionDep) -> TicketDetail:
 
 
 @router.post("", response_model=TicketDetail, status_code=status.HTTP_201_CREATED)
-async def create_ticket(payload: TicketCreate, session: SessionDep) -> TicketDetail:
+async def create_ticket(
+    payload: TicketCreate, session: SessionDep, _user: CurrentUser
+) -> TicketDetail:
     ticket = await tickets_service.create_ticket(session, payload.model_dump())
     return TicketDetail.model_validate(ticket)
 
@@ -86,6 +89,7 @@ async def patch_ticket(
     ticket_id: int,
     payload: TicketPatch,
     session: SessionDep,
+    _user: CurrentUser,
 ) -> TicketDetail:
     # exclude_unset -> u obzir dolaze samo polja koja je klijent stvarno poslao.
     changes = payload.model_dump(exclude_unset=True)

@@ -10,6 +10,7 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
+from app.api.deps import get_current_user
 from app.db.base import Base
 from app.db.models import Ticket, TicketPriority, TicketStatus
 from app.db.session import get_session
@@ -40,13 +41,29 @@ async def session(session_factory):
         yield s
 
 
-@pytest_asyncio.fixture
-async def client(session_factory):
+def _make_session_override(session_factory):
     async def override_get_session():
         async with session_factory() as s:
             yield s
 
-    app.dependency_overrides[get_session] = override_get_session
+    return override_get_session
+
+
+@pytest_asyncio.fixture
+async def client(session_factory):
+    """Autentificirani klijent (auth dependency preskočen) za većinu testova."""
+    app.dependency_overrides[get_session] = _make_session_override(session_factory)
+    app.dependency_overrides[get_current_user] = lambda: "testuser"
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def unauth_client(session_factory):
+    """Klijent bez override-a auth-a - za testiranje zaštite (401)."""
+    app.dependency_overrides[get_session] = _make_session_override(session_factory)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
