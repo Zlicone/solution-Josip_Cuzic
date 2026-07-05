@@ -6,7 +6,7 @@ Za sada app factory vraća minimalnu, ali pokretljivu aplikaciju.
 
 from fastapi import FastAPI
 
-from app.api.routes import tickets
+from app.api.routes import health, stats, tickets
 from app.config import settings
 
 
@@ -25,6 +25,8 @@ def create_app() -> FastAPI:
         return {"service": settings.app_name, "version": settings.app_version}
 
     app.include_router(tickets.router)
+    app.include_router(stats.router)
+    app.include_router(health.router)
 
     return app
 
