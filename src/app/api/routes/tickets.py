@@ -3,12 +3,14 @@
 Koristi moderni FastAPI stil s Annotated tipovima za Query/Depends.
 """
 
+import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser
+from app.core.cache import cache
 from app.db.models import TicketPriority, TicketStatus
 from app.db.session import get_session
 from app.schemas.ticket import (
@@ -21,6 +23,8 @@ from app.schemas.ticket import (
 from app.services import tickets as tickets_service
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
+
+logger = logging.getLogger(__name__)
 
 # Ponovljive Annotated ovisnosti.
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -81,6 +85,8 @@ async def create_ticket(
     payload: TicketCreate, session: SessionDep, _user: CurrentUser
 ) -> TicketDetail:
     ticket = await tickets_service.create_ticket(session, payload.model_dump())
+    cache.clear()  # statistike su se promijenile
+    logger.info("Ticket kreiran: id=%s (user=%s)", ticket.id, _user)
     return TicketDetail.model_validate(ticket)
 
 
@@ -98,4 +104,6 @@ async def patch_ticket(
     ticket = await tickets_service.update_ticket(session, ticket_id, changes)
     if ticket is None:
         raise HTTPException(status_code=404, detail="Ticket not found")
+    cache.clear()  # statistike su se mogle promijeniti
+    logger.info("Ticket izmijenjen: id=%s polja=%s (user=%s)", ticket_id, list(changes), _user)
     return TicketDetail.model_validate(ticket)

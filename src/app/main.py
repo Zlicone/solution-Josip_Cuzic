@@ -8,9 +8,11 @@ from fastapi import FastAPI
 
 from app.api.routes import auth, health, stats, tickets
 from app.config import settings
+from app.core.logging import configure_logging
 
 
 def create_app() -> FastAPI:
+    configure_logging()
     app = FastAPI(
         title=settings.app_name,
         version=settings.app_version,

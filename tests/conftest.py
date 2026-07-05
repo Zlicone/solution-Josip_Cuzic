@@ -5,16 +5,26 @@ pa shema i podaci žive kroz cijeli test). HTTP klijent gađa app preko ASGI
 transporta, uz override get_session dependencyja na test bazu.
 """
 
+import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from app.api.deps import get_current_user
+from app.core.cache import cache
 from app.db.base import Base
 from app.db.models import Ticket, TicketPriority, TicketStatus
 from app.db.session import get_session
 from app.main import app
+
+
+@pytest.fixture(autouse=True)
+def _clear_cache():
+    """Cache je globalni singleton - očisti ga oko svakog testa da ne curi stanje."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest_asyncio.fixture
